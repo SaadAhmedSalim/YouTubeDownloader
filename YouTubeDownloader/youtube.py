@@ -1,5 +1,10 @@
 from tkinter import*
 from tkinter import ttk
+from pytube import*
+from PIL import Image,ImageTk
+import requests
+import io
+
 class Youtube_app:
     def __init__(self,root):
         self.root = root
@@ -12,11 +17,12 @@ class Youtube_app:
                         font=("Times new roman", 16), bg="#262626",
                             fg='white', anchor='w').pack(side=TOP, fill=X)
 
+        self.var_url=StringVar()
         lbl_url = Label(self.root, text="Video URL",
                         font=("Times new roman", 15), bg="white").place(x=10, y=50)
 
         txt_url = Entry(self.root,
-                        font=("Times new roman", 13), bg="lightyellow").place(x=120, y=50, width=350)
+                        font=("Times new roman", 13), textvariable=self.var_url,  bg="lightyellow").place(x=120, y=50, width=350)
 
         lbl_filetype = Label(self.root, text="File Type",
                         font=("Times new roman", 15,), bg="white").place(x=10, y=90)
@@ -32,7 +38,7 @@ class Youtube_app:
                         font=("Times new roman", 15), bg="white", activebackground='white').place(x=220, y=90)
 
         # Button for Search link
-        btn_search=Button(self.root, text="Search",
+        btn_search=Button(self.root, text="Search", command=self.search,
                         font=('Times, new roman',15), bg='red', fg='white').place(x=350, y=90, height=30, width=120)
 
 
@@ -71,7 +77,7 @@ class Youtube_app:
         btn_clear=Button(self.root, text="Clear",
                         font=('Times, new roman',13), bg='grey', fg='white').place(x=320, y=320, height=25, width=70)
         # Button for download the link
-        btn_clear=Button(self.root, text="Clear",
+        btn_clear=Button(self.root, text="Download",
                         font=('Times, new roman',13), bg='green', fg='white').place(x=400, y=320, height=25, width=90)
 
         # Call the ttk
@@ -83,6 +89,37 @@ class Youtube_app:
                                 font=("Times new roman", 13), bg='white')
         self.lbl_message.place(x=0, y=385, relwidth=1)
 
+
+    def search(self):
+        url=self.var_url.get()
+        # it will take the url
+        yt=YouTube(url)
+        v_title = yt.title
+        thumbnail = yt.thumbnail_url
+        # requests for the image
+        response = requests.get(thumbnail)
+        # Image resolution + convert it in bytes
+        img_byte = io.BytesIO(response.content)
+        self.img = Image.open(img_byte)
+        self.img = self.img.resize((180,140), Image.ANTIALIAS)
+        self.img = ImageTk.PhotoImage(self.img)
+        self.video_image.config(image=self.img)
+
+        desc = yt.description[:200]
+
+        # for download, select the type either video ro audio
+        if self.var_fileType.get()=='Video':
+            select_file=yt.streams.filter(progressive=True).first()
+        if self.var_fileType.get()=='Audio':
+            select_file = yt.streams.filter(only_audio=True).first()
+
+        size_inBytes = select_file.filesize
+        max_size = size_inBytes/1024000
+        self.mb = str(round(max_size,2))+'MB'
+        self.lbl_size.config(text="Total Size: "+self.mb)
+        self.video_title.config(text=v_title)
+        self.video_desc.delete('1.0',END)
+        self.video_desc.insert(END, desc)
 
 
 
