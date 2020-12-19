@@ -3,7 +3,7 @@ from tkinter import ttk
 from pytube import*
 from PIL import Image,ImageTk
 import requests
-import io
+import io,os
 
 class Youtube_app:
     def __init__(self,root):
@@ -89,37 +89,64 @@ class Youtube_app:
                                 font=("Times new roman", 13), bg='white')
         self.lbl_message.place(x=0, y=385, relwidth=1)
 
+        # Making Directory for files
 
+        if os.path.exists('Audios')==False:
+            os.mkdir('Audios')
+        if os.path.exists('Videos')==False:
+            os.mkdir('Videos')
+
+
+# All Functions are here
     def search(self):
-        url=self.var_url.get()
         # it will take the url
-        yt=YouTube(url)
-        v_title = yt.title
-        thumbnail = yt.thumbnail_url
+        yt=YouTube(self.var_url.get())
         # requests for the image
-        response = requests.get(thumbnail)
+        response = requests.get(yt.thumbnail_url)
         # Image resolution + convert it in bytes
         img_byte = io.BytesIO(response.content)
         self.img = Image.open(img_byte)
         self.img = self.img.resize((180,140), Image.ANTIALIAS)
         self.img = ImageTk.PhotoImage(self.img)
         self.video_image.config(image=self.img)
+        # Main reason to convert image url into Image
 
-        desc = yt.description[:200]
-
-        # for download, select the type either video ro audio
+        # for download, select the type either video or audio
+        # fetch the size as per type
         if self.var_fileType.get()=='Video':
             select_file=yt.streams.filter(progressive=True).first()
         if self.var_fileType.get()=='Audio':
             select_file = yt.streams.filter(only_audio=True).first()
 
-        size_inBytes = select_file.filesize
-        max_size = size_inBytes/1024000
+        self.size_inBytes = select_file.filesize
+        max_size = self.size_inBytes/1024000
         self.mb = str(round(max_size,2))+'MB'
+        # Updating the frame elements
         self.lbl_size.config(text="Total Size: "+self.mb)
-        self.video_title.config(text=v_title)
+        self.video_title.config(text=yt.title)
         self.video_desc.delete('1.0',END)
-        self.video_desc.insert(END, desc)
+        self.video_desc.insert(END, yt.description[:200])
+
+
+    def progress_(self, streams, chunk, bytes_remaining):
+        percentage = (float(abs(bytes_remaining-self.size_inBytes)/self.size_inBytes))*float(100)
+        self.prog['value']=percentage
+        self.prog.update()
+        self.lbl_percentage.config(text='Downloading: {str(round(percentage,2))}%')
+
+
+    def download(self):
+        yt=YouTube(self.var_url.get(), on_progress_callback.progress_)
+        # fetch the size as per type
+        if self.var_fileType.get()=='Video':
+            select_file=yt.streams.filter(progressive=True).first()
+        if self.var_fileType.get()=='Audio':
+            select_file = yt.streams.filter(only_audio=True).first()
+
+
+
+
+
 
 
 
